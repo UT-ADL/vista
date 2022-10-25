@@ -7,6 +7,7 @@ import copy
 
 from . import CameraParams
 from ....utils import transform, logging, misc
+from .MonodepthModel import MonodepthModel
 
 ZNEAR = 0.01
 ZFAR = 10000
@@ -76,8 +77,9 @@ class ViewSynthesis:
 
         # Mesh of background. Can add more by calling add_bg_mesh for different camera_param
         self._world_rays: Dict[str, np.ndarray] = dict()
-        if self._config['depth_mode'] == DepthModes.FIXED_PLANE:
-            self._depth: Dict[str, np.ndarray] = dict()
+        self._depth: Dict[str, np.ndarray] = dict()
+        if self._config['depth_mode'] == DepthModes.MONODEPTH: # TODO: pass in correct depth mode
+            self._monodepth_model = MonodepthModel() 
         self._bg_node: Dict[str, pyrender.Node] = dict()
         if init_with_bg_mesh:
             self.add_bg_mesh(self._camera_param)
@@ -128,6 +130,8 @@ class ViewSynthesis:
             # Update mesh vertex positions (this won't affect node-level translation and rotation)
             if self._config['depth_mode'] == DepthModes.FIXED_PLANE:
                 depth = self._depth[name]
+            elif self._config['depth_mode'] == DepthModes.MONODEPTH:
+                depth = self._monodepth_model.predict(img)
             else:
                 raise NotImplementedError
 
