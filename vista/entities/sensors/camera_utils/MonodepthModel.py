@@ -10,6 +10,7 @@ import urllib
 import hashlib
 
 from . import networks
+from .networks.layers import disp_to_depth
 
 MODEL_NAME = "mono+stereo_640x192"
 
@@ -62,38 +63,27 @@ class MonodepthModel:
         self.depth_decoder = depth_decoder
 
     def predict(self, cv_img):
-        cv_img_rgb = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
-        input_image = pil.fromarray(cv_img_rgb)
+        with torch.no_grad():
+            cv_img_rgb = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
+            input_image = pil.fromarray(cv_img_rgb)
 
-        original_width, original_height = input_image.size
-        input_image = input_image.resize((self.feed_width, self.feed_height), pil.LANCZOS)
-        input_image = transforms.ToTensor()(input_image).unsqueeze(0)
+            original_width, original_height = input_image.size
+            input_image = input_image.resize((self.feed_width, self.feed_height), pil.LANCZOS)
+            input_image = transforms.ToTensor()(input_image).unsqueeze(0)
 
-        # PREDICTION
-        input_image = input_image.to(self.device)
-        features = self.encoder(input_image)
-        outputs = self.depth_decoder(features)
+            # PREDICTION
+            input_image = input_image.to(self.device)
+            features = self.encoder(input_image)
+            outputs = self.depth_decoder(features)
 
-        disp = outputs[("disp", 0)]
-        disp_resized = torch.nn.functional.interpolate(
-            disp, (original_height, original_width), mode="bilinear", align_corners=False)
+            disp = outputs[("disp", 0)]
+            disp_resized = torch.nn.functional.interpolate(
+                disp, (original_height, original_width), mode="bilinear", align_corners=False)
 
-        _, depth_resized = disp_to_depth(disp_resized, 0.1, 100)
-        metric_depth = STEREO_SCALE_FACTOR * depth_resized.cpu().numpy()
+            _, depth_resized = disp_to_depth(disp_resized, 0.1, 100)
+            metric_depth = STEREO_SCALE_FACTOR * depth_resized.squeeze().cpu().numpy()
 
-        return metric_depth.squeeze().cpu().numpy()
-
-
-def disp_to_depth(disp, min_depth, max_depth):
-    """Convert network's sigmoid output into depth prediction
-    The formula for this conversion is given in the 'additional considerations'
-    section of the paper.
-    """
-    min_disp = 1 / max_depth
-    max_disp = 1 / min_depth
-    scaled_disp = min_disp + (max_disp - min_disp) * disp
-    depth = 1 / scaled_disp
-    return scaled_disp, depth
+            return metric_depth
 
 
 def download_model_if_doesnt_exist(model_name):
