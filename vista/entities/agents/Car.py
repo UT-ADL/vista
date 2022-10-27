@@ -180,10 +180,13 @@ class Car(Entity):
 
         # Update pointers to dataset
         self._trace = self.parent.traces[trace_index]
-        self._timestamp = self.trace.get_master_timestamp(
-            segment_index, frame_index)
-        self._frame_number = self.trace.get_master_frame_number(
-            segment_index, frame_index)
+        exceed_segment, self._timestamp = self.trace.get_master_timestamp(
+            segment_index, frame_index, check_end=True)
+        exceed_segment, self._frame_number = self.trace.get_master_frame_number(
+            segment_index, frame_index, check_end=True)
+        if exceed_segment:
+            self._done = True
+            return
         self._trace_index = trace_index
         self._segment_index = segment_index
         self._frame_index = frame_index
