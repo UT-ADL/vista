@@ -259,7 +259,8 @@ class Trace:
                         segment_timestamps.append(
                             self._multi_sensor.get_time_from_frame_num(
                                 k, frame_num))
-                    good_timestamps[k].append(segment_timestamps)
+                    if len(segment_timestamps) > 0:
+                        good_timestamps[k].append(segment_timestamps)
 
                 segment_start += i
 
