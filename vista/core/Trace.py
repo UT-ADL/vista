@@ -48,6 +48,7 @@ class Trace:
         'labels': DEFAULT_LABELS,
         'max_timestamp_diff_across_frames': 0.2,
         'road_width': 4,
+        'turn_signals': False
     }
 
     def __init__(
@@ -71,6 +72,16 @@ class Trace:
             len(_v)
             for _v in self._good_frames[self._multi_sensor.master_sensor]
         ])
+
+        if self._config['turn_signals']:
+            # Obtain function representation of turn signal
+            turn_signal_csv = os.path.join(self._trace_path, TopicNames.turn_signal + '.csv')
+            logging.debug(f'Reading turn signals from {turn_signal_csv}.')
+            turn_signal = np.genfromtxt(turn_signal_csv, delimiter=',')
+            self._f_turn_signal = interp1d(turn_signal[:, 0], turn_signal[:, 1], kind='previous')
+        else:
+            # There is no turn signal data, return turn signal off state for each timestep
+            self._f_turn_signal = lambda timestep: 1
 
     def find_segment_reset(self) -> int:
         """ Sample a segment index based on number of frames in each segment. Segments with more
@@ -350,6 +361,11 @@ class Trace:
     def f_speed(self) -> Callable:
         """ A 1D interpolation function for speed of the ego-car. """
         return self._f_speed
+
+    @property
+    def f_turn_signal(self) -> Callable:
+        """ A 1D interpolation function for turn signal of the ego-car. """
+        return self._f_turn_signal
 
     @property
     def reset_mode(self) -> str:

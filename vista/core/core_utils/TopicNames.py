@@ -19,6 +19,7 @@ class TopicNames:
     speed = 'speed'
     distance = 'distance'
     lidar_3d = 'lidar_3d'
+    turn_signal = 'turn_signal'
 
     BADVAL = ['BADVAL']  # for denoting topics we don't know yet
 
