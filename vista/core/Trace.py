@@ -47,8 +47,7 @@ class Trace:
         'master_sensor': TopicNames.master_topic,
         'labels': DEFAULT_LABELS,
         'max_timestamp_diff_across_frames': 0.2,
-        'road_width': 4,
-        'turn_signals': False
+        'road_width': 4
     }
 
     def __init__(
@@ -58,6 +57,7 @@ class Trace:
 
         # Get function representation of state information
         self._f_speed, self._f_curvature = self._get_states_func()
+        self._f_turn_signal = self._get_turn_signal_state_func()
 
         # Divide trace to good segments based on video labels and timestamps
         self._multi_sensor: MultiSensor = MultiSensor(
@@ -72,16 +72,6 @@ class Trace:
             len(_v)
             for _v in self._good_frames[self._multi_sensor.master_sensor]
         ])
-
-        if self._config['turn_signals']:
-            # Obtain function representation of turn signal
-            turn_signal_csv = os.path.join(self._trace_path, TopicNames.turn_signal + '.csv')
-            logging.debug(f'Reading turn signals from {turn_signal_csv}.')
-            turn_signal = np.genfromtxt(turn_signal_csv, delimiter=',')
-            self._f_turn_signal = interp1d(turn_signal[:, 0], turn_signal[:, 1], kind='previous')
-        else:
-            # There is no turn signal data, return turn signal off state for each timestep
-            self._f_turn_signal = lambda timestep: 1
 
     def find_segment_reset(self) -> int:
         """ Sample a segment index based on number of frames in each segment. Segments with more
@@ -308,6 +298,27 @@ class Trace:
                                fill_value='extrapolate')
 
         return f_speed, f_curvature
+
+    def _get_turn_signal_state_func(self):
+        """ Read turn signal information from the dataset. Function returning turn signal off state is used
+        in case there is no turn signal data.
+
+        Returns:
+            Return a 1D interpolation function for turn signal state.
+
+        """
+        turn_signals_path = os.path.join(self._trace_path, TopicNames.turn_signal + '.csv')
+        if os.path.exists(turn_signals_path):
+            # Obtain function representation of turn signal
+            logging.debug(f'Reading turn signals from {turn_signals_path}.')
+            turn_signal = np.genfromtxt(turn_signals_path, delimiter=',')
+            turn_signal_func = interp1d(turn_signal[:, 0], turn_signal[:, 1], kind='previous')
+        else:
+            # There is no turn signal data, return turn signal off state for each timestep
+            logging.warning(f'No turn signals data found: {turn_signals_path}.')
+            turn_signal_func = lambda timestep: 1
+
+        return turn_signal_func
 
     def set_seed(self, seed) -> None:
         """ Set random seed.
