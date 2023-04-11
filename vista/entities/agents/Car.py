@@ -84,6 +84,7 @@ class Car(Entity):
         self._tire_angle: float = 0.
         self._human_speed: float = 0.
         self._human_curvature: float = 0.
+        self._human_turn_signal: int = 1
         self._human_steering: float = 0.
         self._human_tire_angle: float = 0.
         self._timestamp: float = 0.
@@ -193,6 +194,7 @@ class Car(Entity):
         # Reset states and dynamics
         self._human_speed = self.trace.f_speed(self.timestamp)
         self._human_curvature = self.trace.f_curvature(self.timestamp)
+        self._human_turn_signal = int(self.trace.f_turn_signal(self.timestamp))
         self._human_steering = curvature2steering(self.human_curvature,
                                                   self.wheel_base,
                                                   self.steering_ratio)
@@ -277,6 +279,7 @@ class Car(Entity):
 
             self._human_speed = self.trace.f_speed(self.timestamp)
             self._human_curvature = self.trace.f_curvature(self.timestamp)
+            self._human_turn_signal = int(self.trace.f_turn_signal(self.timestamp))
             self._human_steering = curvature2steering(self.human_curvature,
                                                       self.wheel_base,
                                                       self.steering_ratio)
@@ -410,6 +413,7 @@ class Car(Entity):
         # Update human control based on current timestamp
         self._human_speed = self.trace.f_speed(self.timestamp)
         self._human_curvature = self.trace.f_curvature(self.timestamp)
+        self._human_turn_signal = int(self.trace.f_turn_signal(self.timestamp))
         self._human_steering = curvature2steering(self.human_curvature,
                                                   self.wheel_base,
                                                   self.steering_ratio)
@@ -523,6 +527,11 @@ class Car(Entity):
     def human_curvature(self) -> float:
         """ Curvature of human trajectory in current timestamp. """
         return self._human_curvature
+
+    @property
+    def human_turn_signal(self) -> int:
+        """ Speed of human turn signal in current timestamp. """
+        return self._human_turn_signal
 
     @property
     def human_steering(self) -> float:
